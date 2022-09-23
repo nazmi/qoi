@@ -1,4 +1,4 @@
-use crate::errors::{ Error, Result };
+use crate::error::{ Error, Result };
 
 /// The colorspace is purely informative.
 /// They do not change the way data chunks are encoded.
@@ -17,8 +17,8 @@ impl Default for ColorSpace {
 // From<T> for U
 // Into<U> for T
 impl From<ColorSpace> for u8 {
-    fn from(colorspace: Colorspace) -> Self {
-        num as Self
+    fn from(colorspace: ColorSpace) -> Self {
+        colorspace as Self
     }
 }
 
@@ -29,7 +29,7 @@ impl TryFrom<u8> for ColorSpace {
         match colorspace {
             0 => Ok(Self::Srgb),
             1 => Ok(Self::Linear),
-            _ => Err(Error::InvalidColorSpace),
+            _ => Err(Error::InvalidColorSpace{ colorspace }),
         }
     }
 
