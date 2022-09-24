@@ -58,7 +58,7 @@ impl Header {
     }
 
     pub const fn n_bytes(&self) -> usize {
-        self.n_bytes() * self.channels.as_u8() as usize
+        self.n_pixels() * self.channels.as_u8() as usize
     }
 }
 
