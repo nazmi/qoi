@@ -3,7 +3,7 @@ use crate::error::{ Error, Result };
 use crate::consts::{
     QOI_HEADER_SIZE,
     QOI_MAGIC,
-    QOI_PIXELS_MAX
+    QOI_PIXELS_MAX, QOI_PADDING_SIZE
 };
 
 
@@ -31,7 +31,7 @@ impl Header {
         
         let px_len = (width as usize).saturating_mul(height as usize);
         if  px_len == 0 || px_len > QOI_PIXELS_MAX {
-            return Err(Error::InvalidImageDimension{ width: width, height: height });
+            return Err(Error::InvalidImageDimension{ width, height });
         }
 
         Ok(Self { 
@@ -58,7 +58,13 @@ impl Header {
     }
 
     pub const fn n_bytes(&self) -> usize {
-        self.n_pixels() * self.channels.as_u8() as usize
+        self.n_pixels().saturating_mul(self.channels.as_u8() as usize)
+    }
+
+    // Worst space: QOI_OP_RGBA 
+    // 1 + rgba => n_pixels + n_pixels*channels
+    pub const fn buf_max_len(&self) -> usize {
+        QOI_HEADER_SIZE + self.n_bytes() + self.n_pixels() + QOI_PADDING_SIZE
     }
 }
 

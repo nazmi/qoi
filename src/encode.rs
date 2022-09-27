@@ -8,17 +8,17 @@ use crate::types::{Channels, ColorSpace};
 fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
     let mut buf: Vec<u8> = Vec::new();
     buf.extend_from_slice(&header.encode());
+    buf.reserve_exact(header.buf_max_len());
 
     let mut run: u8 = 0;
     let mut index = [Pixel::new(); 256];
     let mut px_prev = Pixel::new().with_a(0xff);
     let mut hash_prev = px_prev.hash_index();
     let mut px = Pixel::<N>::new().with_a(0xff);
-    let px_end = data.len() / 4;
+    let px_end = data.len() / N;
 
-    // todo!: vector reserve exact
 
-    for (i, chunk) in data.chunks_exact(4).enumerate() {
+    for (i, chunk) in data.chunks_exact(N).enumerate() {
         px.read(chunk);
 
         if px == px_prev {
@@ -33,8 +33,8 @@ fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
                 run = 0;
             }
 
-            let px_rgba = Pixel::from(px, 0xff);
-            hash_prev = px.hash_index();
+            let px_rgba = px.from(0xff);
+            hash_prev = px_rgba.hash_index();
             let px_index = &mut index[hash_prev as usize];
 
             if *px_index == px_rgba {
@@ -48,8 +48,9 @@ fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
             px_prev = px;
         }
     }
-
+    
     buf.extend_from_slice(&QOI_PADDING);
+    buf.truncate(buf.len());
 
     Ok(buf)
 }

@@ -1,4 +1,4 @@
-use crate::consts::{QOI_OP_LUMA, QOI_OP_RGB, QOI_OP_RGBA};
+use crate::consts::{QOI_OP_LUMA, QOI_OP_RGB, QOI_OP_RGBA, QOI_OP_DIFF};
 use crate::error::Result;
 use core::panic;
 
@@ -51,41 +51,64 @@ impl<const N: usize> Pixel<N> {
         }
     }
 
+    #[allow(unused_assignments)]
     pub fn hash_index(self) -> u8 {
+        let mut index: u64 = 0;
         match N {
-            3 => (self.0[0] * 3 + self.0[1] * 5 + self.0[2] * 7 + 0xff * 11) % 64,
-            4 => (self.0[0] * 3 + self.0[1] * 5 + self.0[2] * 7 + self.0[3] * 11) % 64,
+            3 => {
+                index = self.0[0] as u64 * 3
+                    + self.0[1] as u64 * 5
+                    + self.0[2] as u64 * 7
+                    + 0xffff * 11;
+            }
+            4 => {
+                index = self.0[0] as u64 * 3
+                    + self.0[1] as u64 * 5
+                    + self.0[2] as u64 * 7
+                    + self.0[3] as u64 * 11;
+            }
             _ => unreachable!(),
         }
+
+        index as u8 % 64
     }
 
     pub fn encode(&self, px_prev: Self) -> Result<Vec<u8>> {
         let mut out = Vec::new();
-        if N == 3 || self.a_or(0) == px_prev.a_or(0) {
-            let vr = self.r().wrapping_sub(px_prev.r());
-            let vg = self.g().wrapping_sub(px_prev.g());
-            let vb = self.b().wrapping_sub(px_prev.b());
-            let vg_r = vr.wrapping_sub(vg);
-            let vg_b = vb.wrapping_sub(vg);
-            let (vr_2, vg_2, vb_2) = (vr.wrapping_add(2), vg.wrapping_add(2), vb.wrapping_add(2));
 
-            // X | 0bYY == 0bYY
-            // Return all number under 0bYY
-            // YY is bitset
-            if (vr_2 | vg_2 | vb_2 | 3) == 3 {
-                out.push(0b01 | vr_2 << 4 | vg_2 << 2 | vb_2);
-            } else {
-                let (vg_r_8, vg_b_8) = (vg_r.wrapping_add(8), vg_b.wrapping_add(8));
-                if (vg_r_8 | vg_b_8 | 15) == 15 {
-                    out.push(QOI_OP_LUMA | vg << 8);
-                    out.push(vg_r_8 << 4 | vg_r_8);
+        if N == 3 || self.a_or(0) == px_prev.a_or(0) {
+            let vg = self.g().wrapping_sub(px_prev.g());
+            let vg_32 = vg.wrapping_add(32);
+
+            if vg_32 | 63 == 63 {
+                let vr = self.r().wrapping_sub(px_prev.r());
+                let vb = self.b().wrapping_sub(px_prev.b());
+                let vg_r = vr.wrapping_sub(vg);
+                let vg_b = vb.wrapping_sub(vg);
+                let (vr_2, vg_2, vb_2) =
+                    (vr.wrapping_add(2), vg.wrapping_add(2), vb.wrapping_add(2));
+
+                // X | 0bYY == 0bYY
+                // Return all number under 0bYY
+                // YY is bitset
+                if (vr_2 | vg_2 | vb_2 | 3) == 3 {
+                    out.push(QOI_OP_DIFF | vr_2 << 4 | vg_2 << 2 | vb_2);
                 } else {
-                    let mut vec = vec![QOI_OP_RGB, self.r(), self.g(), self.b()];
-                    out.append(&mut vec);
+                    let (vg_r_8, vg_b_8) = (vg_r.wrapping_add(8), vg_b.wrapping_add(8));
+                    if (vg_r_8 | vg_b_8 | 15) == 15 {
+                        out.push(QOI_OP_LUMA | vg_32);
+                        out.push(vg_r_8 << 4 | vg_b_8);
+                    } else {
+                        let mut vec = vec![QOI_OP_RGB, self.r(), self.g(), self.b()];
+                        out.append(&mut vec);
+                    }
                 }
+            } else {
+                let mut vec = vec![QOI_OP_RGB, self.r(), self.g(), self.b()];
+                out.append(&mut vec);
             }
         } else {
-            let mut vec = vec![QOI_OP_RGBA, self.r(), self.g(), self.b(), self.a()];
+            let mut vec = vec![QOI_OP_RGBA, self.r(), self.g(), self.b(), self.a_or(0xff)];
             out.append(&mut vec);
         }
 
