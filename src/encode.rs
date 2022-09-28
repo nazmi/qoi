@@ -5,11 +5,9 @@ use crate::pixel::Pixel;
 use crate::types::{Channels, ColorSpace};
 
 #[allow(unused_assignments)]
-fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
-    let mut buf: Vec<u8> = Vec::new();
-    buf.extend_from_slice(&header.encode());
-    buf.reserve_exact(header.buf_max_len());
+fn encode_with_n<const N: usize>(buf:&mut [u8], data: &[u8]) -> Result<usize> {
 
+    let mut buf_index = 0;
     let mut run: u8 = 0;
     let mut index = [Pixel::new(); 256];
     let mut px_prev = Pixel::new().with_a(0xff);
@@ -24,12 +22,14 @@ fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
         if px == px_prev {
             run += 1;
             if run == 62 || i == px_end - 1 {
-                buf.push(QOI_OP_RUN | (run - 1));
+                buf[buf_index] = QOI_OP_RUN | (run - 1);
+                buf_index += 1;
                 run = 0;
             }
         } else {
             if run > 0 {
-                buf.push(QOI_OP_RUN | (run - 1));
+                buf[buf_index] = QOI_OP_RUN | (run - 1);
+                buf_index += 1;
                 run = 0;
             }
 
@@ -38,21 +38,29 @@ fn encode_into<const N: usize>(data: &[u8], header: Header) -> Result<Vec<u8>> {
             let px_index = &mut index[hash_prev as usize];
 
             if *px_index == px_rgba {
-                buf.push(QOI_OP_INDEX | hash_prev);
+                buf[buf_index] = QOI_OP_INDEX | hash_prev;
+                buf_index += 1;
             } else {
                 *px_index = px_rgba;
                 let out = px.encode(px_prev)?;
-                buf.extend(out.into_iter());
+                for item in out {
+                    buf[buf_index] = item;
+                    buf_index += 1;
+                }
             }
-
+            
             px_prev = px;
         }
     }
     
-    buf.extend_from_slice(&QOI_PADDING);
-    buf.truncate(buf.len());
-
-    Ok(buf)
+    
+    for i in 0..8 {
+        buf[buf_index] = QOI_PADDING[i];
+        buf_index += 1;
+    }
+    
+    
+    Ok(buf_index + QOI_HEADER_SIZE)
 }
 
 pub struct Encoder<'a> {
@@ -80,10 +88,23 @@ impl<'a> Encoder<'a> {
         Ok(Self { data, header })
     }
 
-    pub fn encode(self) -> Result<Vec<u8>> {
+    pub fn encode(&self, out: &mut [u8]) -> Result<usize> {
         match self.header.channels {
-            Channels::Rgb => encode_into::<3>(self.data, self.header),
-            Channels::Rgba => encode_into::<4>(self.data, self.header),
+            Channels::Rgb => encode_with_n::<3>(out, self.data),
+            Channels::Rgba => encode_with_n::<4>(out, self.data),
         }
+    }
+
+    pub fn encode_to_vec(&self) -> Result<Vec<u8>> {
+        let mut out = vec![0_u8; self.header.buf_max_len()];
+        let (head, tail) = out.split_at_mut(QOI_HEADER_SIZE);
+        head.copy_from_slice(&self.header.encode());
+        
+        let size = self.encode(tail)?;
+        out.truncate(size);
+        
+        Ok(out)
+
+
     }
 }

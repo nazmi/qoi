@@ -1,12 +1,5 @@
-pub mod header;
-pub mod encode;
-pub mod pixel;
-pub mod error;
-pub mod types;
-pub mod consts;
+use qoi::*;
 
-use crate::encode::Encoder;
-use crate::error::Result;
 use std::io::Write;
 use std::fs::{File};
 use std::path::{Path, PathBuf};
@@ -48,7 +41,7 @@ fn main() -> Result<()> {
         let height = info.height;
         let encoder = Encoder::new(data, width, height)?;
         
-        let out = encoder.encode()?;
+        let out = encoder.encode_to_vec()?;
         let out_file = image.as_path().with_extension("qoi");
         let mut f = File::create(out_file).expect("aa");
         f.write_all(&out).expect("aaa");
