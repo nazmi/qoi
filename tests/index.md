@@ -18,5 +18,9 @@ rgb-diff rgba-diff
 
 ```
 rgb-rgba-run-diff-index-luma
-run-luma-rgb-index-diff-rgba
+run-rgba-luma-index-diff-rgb
 ```
+
+## Encoder
+
+Encoder are tested with 10 different image pngs and compared to the reference encoder.
