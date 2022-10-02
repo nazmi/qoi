@@ -1,5 +1,8 @@
+use std::error::Error as OtherError;
 use std::fmt::{self, Display};
+use std::io;
 
+pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     InvalidImageLength {
@@ -18,13 +21,22 @@ pub enum Error {
     InvalidChannels {
         channels: u8,
     },
+    Other {
+        message: String,
+    },
 }
 
-pub type Result<T> = core::result::Result<T, Error>;
+impl Error {
+    fn new(msg: String) -> Self {
+        Self::Other {
+            message: msg.to_string(),
+        }
+    }
+}
 
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self {
             Self::InvalidImageLength {
                 size,
                 width,
@@ -50,6 +62,17 @@ impl Display for Error {
                     channels
                 )
             }
+            Self::Other { message } => {
+                write!(f, "Other Error: {}.", message)
+            }
         }
+    }
+}
+
+impl OtherError for Error {}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Self::new(err.to_string())
     }
 }

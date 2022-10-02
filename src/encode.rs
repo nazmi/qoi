@@ -48,9 +48,9 @@ fn encode_with_n<const N: usize>(buf:&mut [u8], data: &[u8]) -> Result<usize> {
                     buf_index += 1;
                 }
             }
-            
+            px_prev = px;
         }
-        px_prev = px;
+        
     }
     
     

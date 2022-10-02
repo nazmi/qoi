@@ -1,6 +1,5 @@
 use crate::consts::{QOI_OP_LUMA, QOI_OP_RGB, QOI_OP_RGBA, QOI_OP_DIFF};
 use crate::error::Result;
-use core::panic;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Pixel<const N: usize>([u8; N]);
@@ -130,7 +129,7 @@ impl<const N: usize> Pixel<N> {
     pub const fn a(self) -> u8 {
         match N {
             4 => self.0[3],
-            _ => panic!(),
+            _ => todo!(),
         }
     }
 
