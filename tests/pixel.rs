@@ -21,6 +21,31 @@ fn test_chunk<const N: usize>(data: impl AsRef<[[u8; N]]>, expected: impl AsRef<
         expected.len() + QOI_HEADER_SIZE + QOI_PADDING_SIZE
     );
 }
+#[test]
+fn test_pixel(){
+    let arr = [0xab,0xcd,0xef];
+    let mut px = Pixel::from(arr);
+    assert_eq!(<[u8; 3]>::from(px), arr);
+
+    px.with_a(0x00);
+    assert_eq!(<[u8; 3]>::from(px), arr);
+    assert_eq!(px.a_or(0xff), 0xff);
+
+    let rgb = [0x00, 0x00, 0x00];
+    px.read(&rgb);
+    assert_eq!(<[u8; 3]>::from(px), rgb);
+
+    let mut px = px.from_a(0xff);
+    assert_eq!(<[u8; 4]>::from(px), [0x00, 0x00, 0x00, 0xff]);
+
+    let rgba = [0xfe, 0xfe, 0xfe, 0xfe];
+    px.read(&rgba);
+    assert_eq!(<[u8; 4]>::from(px), rgba);
+    assert_eq!(px.a_or(0xff), 0xfe);
+    assert_eq!(px.a(), 0xfe);
+
+}
+
 
 #[test]
 fn test_encode_rgb() {
