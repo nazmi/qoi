@@ -33,7 +33,7 @@ fn encode_with_n<const N: usize>(buf:&mut [u8], data: &[u8]) -> Result<usize> {
                 run = 0;
             }
 
-            let px_rgba = px.from(0xff);
+            let px_rgba = px.from_a(0xff);
             hash_prev = px_rgba.hash_index();
             let px_index = &mut index[hash_prev as usize];
 
@@ -49,8 +49,8 @@ fn encode_with_n<const N: usize>(buf:&mut [u8], data: &[u8]) -> Result<usize> {
                 }
             }
             
-            px_prev = px;
         }
+        px_prev = px;
     }
     
     

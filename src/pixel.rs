@@ -31,7 +31,7 @@ impl<const N: usize> Pixel<N> {
         }
     }
 
-    pub fn from(self, a: u8) -> Pixel<4> {
+    pub fn from_a(self, a: u8) -> Pixel<4> {
         let mut out = Pixel::new();
 
         if N == 4 {
@@ -147,3 +147,13 @@ impl<const N: usize> From<Pixel<N>> for [u8; N] {
         pixel.0
     }
 }
+
+impl<const N: usize> From<[u8; N]> for Pixel<N> {
+    fn from(val: [u8; N]) -> Self {
+        let mut pixel = Pixel::new();
+        let val = &val[..N];
+        pixel.read(val);
+        pixel
+    }
+}
+
